@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT mac, api_key, friendly_id FROM devices WHERE mac = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "mac",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "api_key",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "friendly_id",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "6bcb6857b3a4b16df46be2ab8277dc47f8a3937f41c8f51ddd6bbacd86a7caf1"
+}

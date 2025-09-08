@@ -1,0 +1,5 @@
+[database]
+path = "sqlite:trmnl.db"
+
+[app]
+setup_logo_url = "https://usetrmnl.com/images/setup/setup-logo.bmp"
