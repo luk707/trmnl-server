@@ -1,21 +1,27 @@
 use std::{
     sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use axum::{
-    Json, Router,
-    body::Bytes,
-    extract::State,
-    http::HeaderMap,
+    Json, Router, ServiceExt,
+    body::{Body, Bytes},
+    extract::{Request, State},
+    http::{HeaderMap, Response, StatusCode},
     routing::{get, post},
 };
 use config::Config;
 use rand::{Rng, distr::Alphanumeric};
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
+use sqlx::{SqlitePool, sqlite::SqliteConnectOptions};
 use time::UtcOffset;
-use tracing::info;
+use tower::Layer;
+use tower_http::{
+    normalize_path::NormalizePathLayer,
+    request_id::{MakeRequestUuid, PropagateRequestIdLayer, RequestId, SetRequestIdLayer},
+    trace::TraceLayer,
+};
+use tracing::{Span, info};
 use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 use uuid::Uuid;
 
@@ -77,6 +83,7 @@ async fn main() -> anyhow::Result<()> {
         .with(
             fmt::layer()
                 .json()
+                .flatten_event(true)
                 .with_timer(fmt::time::OffsetTime::new(
                     offset,
                     time::format_description::well_known::Rfc3339,
@@ -98,7 +105,15 @@ async fn main() -> anyhow::Result<()> {
     info!(msg = "Loaded config", ?settings);
 
     // DB connection pool
-    let pool = SqlitePool::connect(&settings.database.path).await?;
+    let pool = SqlitePool::connect_with(
+        SqliteConnectOptions::new()
+            .filename(&settings.database.path)
+            .create_if_missing(true),
+    )
+    .await?;
+
+    // Apply migrations
+    apply_migrations(&pool).await?;
 
     info!(msg = "Database initialized", path = %settings.database.path);
 
@@ -111,14 +126,89 @@ async fn main() -> anyhow::Result<()> {
         .route("/", get(|| async { "Hello, World!" }))
         .route("/api/setup", get(setup_handler))
         .route("/api/display", get(display_handler))
-        .route("/api/logs", post(logs_handler))
-        .with_state(state);
+        .route("/api/log", post(log_handler))
+        .with_state(state)
+        .layer(PropagateRequestIdLayer::x_request_id())
+        .layer(
+            TraceLayer::new_for_http()
+                .on_request(|req: &Request<Body>, _span: &Span| {
+                    let id = req
+                        .extensions()
+                        .get::<RequestId>()
+                        .and_then(|req_id| req_id.header_value().to_str().ok())
+                        .unwrap_or_default()
+                        .to_string();
+
+                    info!(
+                        msg = "Request initiated",
+                        req_id = %id,
+                        method = %req.method(),
+                        uri = %req.uri()
+                    )
+                })
+                .on_response(|res: &Response<Body>, latency: Duration, _span: &Span| {
+                    let id = res
+                        .extensions()
+                        .get::<RequestId>()
+                        .and_then(|req_id| req_id.header_value().to_str().ok())
+                        .unwrap_or_default()
+                        .to_string();
+
+                    info!(
+                        msg = "Request processed",
+                        req_id = %id,
+                        status = %res.status().as_u16(),
+                        latency = ?latency
+                    )
+                }),
+        )
+        .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid::default()));
+
+    let app = NormalizePathLayer::trim_trailing_slash().layer(app);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
     info!(msg = "Server starting", addr = "0.0.0.0:3000");
 
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, ServiceExt::<Request>::into_make_service(app))
+        .await
+        .unwrap();
+
+    Ok(())
+}
+
+async fn apply_migrations(pool: &SqlitePool) -> anyhow::Result<()> {
+    let before_count: i64 = match sqlx::query_scalar!("SELECT COUNT(*) FROM _sqlx_migrations")
+        .fetch_one(pool)
+        .await
+    {
+        Ok(count) => count,
+        Err(sqlx::Error::Database(_)) => 0,
+        Err(e) => return Err(e.into()),
+    };
+
+    sqlx::migrate!("./migrations").run(pool).await?;
+
+    let after_count: i64 = sqlx::query_scalar!("SELECT COUNT(*) FROM _sqlx_migrations")
+        .fetch_one(pool)
+        .await?;
+
+    let limit = after_count - before_count;
+
+    let new_migrations = sqlx::query!(
+        "SELECT version, description FROM _sqlx_migrations ORDER BY version DESC LIMIT ?",
+        limit
+    )
+    .fetch_all(pool)
+    .await?;
+
+    for m in new_migrations {
+        info!(
+            msg = "New migration applied",
+            version = %m.version.map(|v| v.to_string()).unwrap_or_default(),
+            description = %m.description,
+        );
+    }
 
     Ok(())
 }
@@ -185,8 +275,8 @@ async fn setup_handler(headers: HeaderMap, State(state): State<AppState>) -> Jso
 async fn display_handler(
     headers: HeaderMap,
     State(state): State<AppState>,
-) -> Json<serde_json::Value> {
-    let mac = headers
+) -> Result<Json<DisplayResponse>, (StatusCode, Json<DisplayError>)> {
+    let mac_header = headers
         .get("ID")
         .and_then(|h| h.to_str().ok())
         .unwrap_or_default()
@@ -222,7 +312,36 @@ async fn display_handler(
         .unwrap_or("1800")
         .to_string();
 
-    // Lookup device by api_key
+    // No API key → return default response
+    if access_token.is_empty() {
+        let filename = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .to_string();
+
+        info!(
+            msg = "Display request with no API key",
+            mac = %mac_header,
+            rssi = %rssi,
+            fw_version = %fw_version,
+            battery_voltage = %battery_voltage,
+            refresh_rate = %refresh_rate,
+            filename = %filename
+        );
+
+        return Ok(Json(DisplayResponse {
+            status: 0,
+            image_url: state.config.app.setup_logo_url.clone(),
+            filename,
+            update_firmware: false,
+            firmware_url: None,
+            refresh_rate: "1800".to_string(),
+            reset_firmware: false,
+        }));
+    }
+
+    // Lookup device by API key (ignore mac)
     let device = sqlx::query!(
         "SELECT mac, friendly_id FROM devices WHERE api_key = ?",
         access_token
@@ -249,32 +368,39 @@ async fn display_handler(
                 filename = %filename
             );
 
-            Json(serde_json::json!({
-                "status": 0,
-                "image_url": state.config.app.setup_logo_url.clone(),
-                "filename": filename,
-                "update_firmware": false,
-                "firmware_url": serde_json::Value::Null,
-                "refresh_rate": "1800",
-                "reset_firmware": false
+            Ok(Json(DisplayResponse {
+                status: 0,
+                image_url: state.config.app.setup_logo_url.clone(),
+                filename,
+                update_firmware: false,
+                firmware_url: None,
+                refresh_rate: "1800".to_string(),
+                reset_firmware: false,
             }))
         }
         None => {
             info!(
                 msg = "Display request failed",
-                mac = %mac,
+                access_token = %access_token,
+                rssi = %rssi,
+                fw_version = %fw_version,
+                battery_voltage = %battery_voltage,
+                refresh_rate = %refresh_rate,
             );
 
-            Json(serde_json::json!({
-                "status": 500,
-                "error": "Device not found"
-            }))
+            Err((
+                StatusCode::NOT_FOUND,
+                Json(DisplayError {
+                    status: 404,
+                    error: String::from("Device not found"),
+                }),
+            ))
         }
     }
 }
 
-async fn logs_handler(
-    State(state): State<AppState>,
+async fn log_handler(
+    State(_state): State<AppState>,
     headers: HeaderMap,
     body: Bytes,
 ) -> Json<serde_json::Value> {
