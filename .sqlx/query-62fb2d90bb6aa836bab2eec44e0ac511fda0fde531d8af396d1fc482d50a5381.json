@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT mac, friendly_id, rssi, battery_voltage, fw_version, refresh_rate\n         FROM devices\n         WHERE friendly_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "mac",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "friendly_id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "rssi",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "battery_voltage",
+        "ordinal": 3,
+        "type_info": "Float"
+      },
+      {
+        "name": "fw_version",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "refresh_rate",
+        "ordinal": 5,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "62fb2d90bb6aa836bab2eec44e0ac511fda0fde531d8af396d1fc482d50a5381"
+}

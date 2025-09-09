@@ -29,7 +29,10 @@ use db::{apply_migrations, connect};
 use handlers::{display_handler, log_handler, setup_handler};
 use state::AppState;
 
-use crate::utils::get_request_id;
+use crate::{
+    handlers::{get_device_handler, list_devices_handler},
+    utils::get_request_id,
+};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -78,6 +81,8 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/setup", get(setup_handler))
         .route("/api/display", get(display_handler))
         .route("/api/log", post(log_handler))
+        .route("/api/devices", get(list_devices_handler))
+        .route("/api/devices/{friendly_id}", get(get_device_handler))
         .with_state(state)
         .layer(PropagateRequestIdLayer::x_request_id())
         .layer(
