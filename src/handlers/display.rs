@@ -54,11 +54,44 @@ pub async fn display_handler(
 
     match device {
         Some(dev) => {
+            // Parse numeric fields for DB update
+            let rssi_val: Option<i32> = rssi.parse().ok();
+            let battery_val: Option<f64> = battery_voltage.parse().ok();
+            let refresh_val: Option<i32> = refresh_rate.parse().ok();
+            let fw_val: Option<&str> = if fw_version.is_empty() {
+                None
+            } else {
+                Some(&fw_version)
+            };
+
+            // Update snapshot fields in DB
+            let _ = sqlx::query!(
+                r#"
+                UPDATE devices
+                SET rssi = ?,
+                    battery_voltage = ?,
+                    fw_version = ?,
+                    refresh_rate = ?
+                WHERE mac = ?
+                "#,
+                rssi_val,
+                battery_val,
+                fw_val,
+                refresh_val,
+                dev.mac
+            )
+            .execute(&*state.db)
+            .await;
+
             info!(
                 msg = "Processing display request",
                 req_id = %request_id_to_string(&req_id),
                 mac = ?dev.mac,
-                %rssi, %fw_version, %battery_voltage, %refresh_rate, %filename
+                %rssi,
+                %fw_version,
+                %battery_voltage,
+                %refresh_rate,
+                %filename
             );
 
             Json(DisplayResponse {
@@ -76,7 +109,10 @@ pub async fn display_handler(
                 msg = "Rejecting display request",
                 req_id = %request_id_to_string(&req_id),
                 access_token = %access_token,
-                %rssi, %fw_version, %battery_voltage, %refresh_rate
+                %rssi,
+                %fw_version,
+                %battery_voltage,
+                %refresh_rate
             );
 
             Json(DisplayResponse {
