@@ -5,7 +5,7 @@ use axum::{
     body::Body,
     extract::Request,
     http::{HeaderName, Response},
-    routing::{get, post},
+    routing::{get, post, put},
 };
 use time::UtcOffset;
 use tower_http::{
@@ -30,7 +30,10 @@ use handlers::{display_handler, log_handler, setup_handler};
 use state::AppState;
 
 use crate::{
-    handlers::{get_device_handler, list_devices_handler},
+    handlers::{
+        get_device_handler, get_device_images_handler, list_devices_handler,
+        put_device_images_handler,
+    },
     utils::get_request_id,
 };
 
@@ -83,6 +86,14 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/log", post(log_handler))
         .route("/api/devices", get(list_devices_handler))
         .route("/api/devices/{friendly_id}", get(get_device_handler))
+        .route(
+            "/api/devices/{friendly_id}/images",
+            get(get_device_images_handler),
+        )
+        .route(
+            "/api/devices/{friendly_id}/images",
+            put(put_device_images_handler),
+        )
         .with_state(state)
         .layer(PropagateRequestIdLayer::x_request_id())
         .layer(

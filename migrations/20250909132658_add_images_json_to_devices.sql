@@ -1,0 +1,2 @@
+ALTER TABLE devices
+ADD COLUMN images_json TEXT DEFAULT '[]' NOT NULL;
