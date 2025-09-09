@@ -45,7 +45,7 @@ pub async fn display_handler(
 
     // Lookup device by API key
     let device = sqlx::query!(
-        "SELECT mac, friendly_id FROM devices WHERE api_key = ?",
+        "SELECT mac, friendly_id, images_json FROM devices WHERE api_key = ?",
         access_token
     )
     .fetch_optional(&*state.db)
@@ -54,6 +54,26 @@ pub async fn display_handler(
 
     match device {
         Some(dev) => {
+            let images_json: Option<String> = Some(dev.images_json.clone());
+            let images: Vec<String> = if let Some(json_str) = images_json {
+                serde_json::from_str::<Vec<String>>(&json_str).unwrap_or_default()
+            } else {
+                Vec::new()
+            };
+
+            let mut counters = state.image_counters.lock().await;
+            let index: &mut usize = counters.entry(dev.friendly_id.clone()).or_insert(0);
+            let image_url = if images.is_empty() {
+                state.config.app.setup_logo_url.clone()
+            } else {
+                let url = images
+                    .get(*index)
+                    .cloned()
+                    .unwrap_or_else(|| state.config.app.setup_logo_url.clone());
+                *index = (*index + 1) % images.len();
+                url
+            };
+
             // Parse numeric fields for DB update
             let rssi_val: Option<i32> = rssi.parse().ok();
             let battery_val: Option<f64> = battery_voltage.parse().ok();
@@ -96,7 +116,7 @@ pub async fn display_handler(
 
             Json(DisplayResponse {
                 status: 0,
-                image_url: state.config.app.setup_logo_url.clone(),
+                image_url,
                 filename,
                 update_firmware: false,
                 firmware_url: None,

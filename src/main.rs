@@ -1,4 +1,4 @@
-use std::{iter::once, time::Duration};
+use std::{collections::HashMap, iter::once, sync::Arc, time::Duration};
 
 use axum::{
     Router, ServiceExt,
@@ -8,6 +8,7 @@ use axum::{
     routing::{get, post, put},
 };
 use time::UtcOffset;
+use tokio::sync::Mutex;
 use tower_http::{
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
     sensitive_headers::SetSensitiveRequestHeadersLayer,
@@ -76,6 +77,7 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState {
         db: std::sync::Arc::new(pool),
         config: settings,
+        image_counters: Arc::new(Mutex::new(HashMap::<String, usize>::new())),
     };
 
     // Build routes

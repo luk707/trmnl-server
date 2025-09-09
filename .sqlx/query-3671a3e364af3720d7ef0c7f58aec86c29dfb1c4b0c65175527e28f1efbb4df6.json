@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT mac, friendly_id FROM devices WHERE api_key = ?",
+  "query": "SELECT mac, friendly_id, images_json FROM devices WHERE api_key = ?",
   "describe": {
     "columns": [
       {
@@ -12,6 +12,11 @@
         "name": "friendly_id",
         "ordinal": 1,
         "type_info": "Text"
+      },
+      {
+        "name": "images_json",
+        "ordinal": 2,
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -19,8 +24,9 @@
     },
     "nullable": [
       false,
+      false,
       false
     ]
   },
-  "hash": "226ffab1f21cfe4c3c539be1a0d112de59a35631212179072df3c8e44f1e6737"
+  "hash": "3671a3e364af3720d7ef0c7f58aec86c29dfb1c4b0c65175527e28f1efbb4df6"
 }
