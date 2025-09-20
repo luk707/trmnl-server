@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                UPDATE devices\n                SET rssi = ?,\n                    battery_voltage = ?,\n                    fw_version = ?,\n                    refresh_rate = ?\n                WHERE id = ?\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "42e052d781e184c08a71b3cb7dbca5fcf5c2739dd61548d733b0643146490aa9"
+}

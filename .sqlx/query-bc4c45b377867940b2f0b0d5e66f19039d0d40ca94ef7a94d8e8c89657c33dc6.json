@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO devices (mac, api_key, id) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "bc4c45b377867940b2f0b0d5e66f19039d0d40ca94ef7a94d8e8c89657c33dc6"
+}
