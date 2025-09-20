@@ -1,30 +1,27 @@
-use crate::models::DeviceInfo;
-use crate::state::AppState;
-use axum::{Json, extract::State};
+use crate::{models::DeviceInfo, repositories::device::DeviceRepo};
+use axum::Extension;
+use axum::Json;
+use axum::http::StatusCode;
 
-pub async fn list_devices_handler(State(state): State<AppState>) -> Json<Vec<DeviceInfo>> {
-    let devices = sqlx::query!(
-        r#"
-        SELECT id, mac, rssi, battery_voltage, fw_version, refresh_rate
-        FROM devices
-        ORDER BY id
-        "#
-    )
-    .fetch_all(&*state.db)
-    .await
-    .unwrap_or_default();
+pub async fn list_devices_handler(
+    Extension(device_repo): Extension<DeviceRepo>,
+) -> Result<Json<Vec<DeviceInfo>>, (StatusCode, &'static str)> {
+    let devices = device_repo
+        .list()
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong"))?;
 
-    let result = devices
-        .into_iter()
-        .map(|d| DeviceInfo {
-            id: d.id,
-            mac: d.mac,
-            rssi: d.rssi,
-            battery_voltage: d.battery_voltage,
-            fw_version: d.fw_version,
-            refresh_rate: d.refresh_rate,
-        })
-        .collect();
-
-    Json(result)
+    Ok(Json(
+        devices
+            .iter()
+            .map(|device| DeviceInfo {
+                id: device.id.clone(),
+                mac: device.mac.clone(),
+                rssi: device.rssi,
+                battery_voltage: device.battery_voltage,
+                fw_version: device.fw_version.clone(),
+                refresh_rate: device.refresh_rate,
+            })
+            .collect(),
+    ))
 }

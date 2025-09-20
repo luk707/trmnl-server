@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                SELECT\n                    id,\n                    mac,\n                    api_key,\n                    rssi,\n                    battery_voltage,\n                    fw_version,\n                    refresh_rate,\n                    images_json\n                FROM devices\n                ORDER BY id\n                ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "mac",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "api_key",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "rssi",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "battery_voltage",
+        "ordinal": 4,
+        "type_info": "Float"
+      },
+      {
+        "name": "fw_version",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "refresh_rate",
+        "ordinal": 6,
+        "type_info": "Integer"
+      },
+      {
+        "name": "images_json",
+        "ordinal": 7,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "f5352e473168b26d1f9e2c80845ead63ae1adacdc60c1ef457e760751690a755"
+}

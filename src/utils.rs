@@ -16,17 +16,13 @@ pub fn request_id_to_string(req_id: &RequestId) -> String {
         .to_string()
 }
 
-pub fn get_header(headers: &HeaderMap, name: &HeaderName) -> String {
+pub fn get_header<'a>(headers: &'a HeaderMap, name: &HeaderName) -> &'a str {
     headers
         .get(name)
         .and_then(|h| h.to_str().ok())
         .unwrap_or_default()
-        .to_string()
 }
 
-pub fn get_optional_header(headers: &HeaderMap, name: &HeaderName) -> Option<String> {
-    headers
-        .get(name)
-        .and_then(|h| h.to_str().ok())
-        .map(|s| s.to_string())
-    }
+pub fn get_optional_header<'a>(headers: &'a HeaderMap, name: &HeaderName) -> Option<&'a str> {
+    headers.get(name).and_then(|h| h.to_str().ok())
+}

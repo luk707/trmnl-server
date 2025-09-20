@@ -1,14 +1,13 @@
-use std::{collections::HashMap, iter::once, sync::Arc, time::Duration};
+use std::{iter::once, sync::Arc, time::Duration};
 
 use axum::{
-    Router, ServiceExt,
+    Extension, Router, ServiceExt,
     body::Body,
     extract::Request,
     http::{HeaderName, Response},
     routing::{get, post, put},
 };
 use time::UtcOffset;
-use tokio::sync::Mutex;
 use tower_http::{
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
     sensitive_headers::SetSensitiveRequestHeadersLayer,
@@ -21,20 +20,19 @@ mod config;
 mod db;
 mod handlers;
 mod headers;
+mod layers;
 mod models;
-mod state;
+mod repositories;
 mod utils;
 
-use config::ServerConfig;
-use db::{apply_migrations, connect};
-use handlers::{display_handler, log_handler, setup_handler};
-use state::AppState;
-
 use crate::{
+    config::ServerConfig,
+    db::{apply_migrations, connect},
     handlers::{
-        get_device_handler, get_device_images_handler, list_devices_handler,
-        put_device_images_handler,
+        display_handler, get_device_handler, get_device_images_handler, list_devices_handler,
+        log_handler, put_device_images_handler, setup_handler,
     },
+    layers::device::DeviceRepoLayer,
     utils::get_request_id,
 };
 
@@ -70,15 +68,9 @@ async fn main() -> anyhow::Result<()> {
     );
 
     // Connect to DB
-    let pool = connect(&settings.database.path).await?;
+    let pool = Arc::new(connect(&settings.database.path).await?);
     apply_migrations(&pool).await?;
     info!(msg = "Initialized database", path = %settings.database.path);
-
-    let state = AppState {
-        db: std::sync::Arc::new(pool),
-        config: settings,
-        image_counters: Arc::new(Mutex::new(HashMap::<String, usize>::new())),
-    };
 
     // Build routes
     let app = Router::new()
@@ -88,15 +80,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/log", post(log_handler))
         .route("/api/devices", get(list_devices_handler))
         .route("/api/devices/{id}", get(get_device_handler))
-        .route(
-            "/api/devices/{id}/images",
-            get(get_device_images_handler),
-        )
-        .route(
-            "/api/devices/{id}/images",
-            put(put_device_images_handler),
-        )
-        .with_state(state)
+        .route("/api/devices/{id}/images", get(get_device_images_handler))
+        .route("/api/devices/{id}/images", put(put_device_images_handler))
+        .layer(Extension(ServerConfig::load()?))
+        .layer(DeviceRepoLayer::sqlite(pool.clone()))
         .layer(PropagateRequestIdLayer::x_request_id())
         .layer(
             TraceLayer::new_for_http()

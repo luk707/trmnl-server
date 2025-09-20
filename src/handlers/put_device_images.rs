@@ -1,23 +1,16 @@
-use crate::state::AppState;
-use axum::{Json, extract::Path, extract::State};
+use crate::repositories::device::DeviceRepo;
+
+use axum::{Extension, Json, extract::Path, http::StatusCode};
 
 pub async fn put_device_images_handler(
+    Extension(device_repo): Extension<DeviceRepo>,
     Path(id): Path<String>,
-    State(state): State<AppState>,
     Json(images): Json<Vec<String>>,
-) -> Json<Vec<String>> {
-    // Serialize the array to JSON
-    let json_str = serde_json::to_string(&images).unwrap_or_else(|_| "[]".to_string());
+) -> Result<Json<Vec<String>>, (StatusCode, &'static str)> {
+    device_repo
+        .update_images(&id, &images)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong"))?;
 
-    // Update the database
-    let _ = sqlx::query!(
-        "UPDATE devices SET images_json = ? WHERE id = ?",
-        json_str,
-        id
-    )
-    .execute(&*state.db)
-    .await;
-
-    // Return the new list to confirm
-    Json(images)
+    Ok(Json(images))
 }

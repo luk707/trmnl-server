@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE devices\n            SET\n                rssi = COALESCE(?, rssi),\n                battery_voltage = COALESCE(?, battery_voltage),\n                fw_version = COALESCE(?, fw_version),\n                refresh_rate = COALESCE(?, refresh_rate)\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "dfc0823ee08833764f963cc22f811e526ba7ea4e1a495c01a3b3d400a24bc767"
+}

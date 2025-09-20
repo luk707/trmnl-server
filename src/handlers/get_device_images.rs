@@ -1,22 +1,17 @@
-use crate::state::AppState;
-use axum::{Json, extract::Path, extract::State};
+use axum::{Extension, Json, extract::Path, http::StatusCode};
 
-fn parse_images(json: &str) -> Vec<String> {
-    serde_json::from_str(json).unwrap_or_default()
-}
+use crate::repositories::device::DeviceRepo;
 
 pub async fn get_device_images_handler(
     Path(id): Path<String>,
-    State(state): State<AppState>,
-) -> Json<Vec<String>> {
-    let record = sqlx::query!("SELECT images_json FROM devices WHERE id = ?", id)
-        .fetch_optional(&*state.db)
+    Extension(device_repo): Extension<DeviceRepo>,
+) -> Result<Json<Vec<String>>, (StatusCode, &'static str)> {
+    match device_repo
+        .get_by_id(&id)
         .await
-        .unwrap();
-
-    let images = record
-        .map(|r| parse_images(&r.images_json))
-        .unwrap_or_default();
-
-    Json(images)
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong"))?
+    {
+        Some(device) => Ok(Json(device.images)),
+        _ => Err((StatusCode::NOT_FOUND, "Device not found")),
+    }
 }

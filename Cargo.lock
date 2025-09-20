@@ -2308,6 +2308,7 @@ name = "trmnl-server"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "axum",
  "config",
  "rand 0.9.2",
