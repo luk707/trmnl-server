@@ -9,12 +9,13 @@ CREATE TABLE devices (
     rssi INTEGER,
     battery_voltage REAL,
     fw_version TEXT,
-    refresh_rate INTEGER
+    refresh_rate INTEGER,
+    images_json  TEXT DEFAULT '[]' NOT NULL    
 );
 
 -- Copy existing data
-INSERT INTO devices (id, api_key, mac, rssi, battery_voltage, fw_version, refresh_rate)
-SELECT friendly_id, api_key, mac, rssi, battery_voltage, fw_version, refresh_rate
+INSERT INTO devices (id, api_key, mac, rssi, battery_voltage, fw_version, refresh_rate, images_json)
+SELECT friendly_id, api_key, mac, rssi, battery_voltage, fw_version, refresh_rate, images_json
 FROM devices_old;
 
 -- Drop the old table

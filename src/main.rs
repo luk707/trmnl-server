@@ -87,13 +87,13 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/display", get(display_handler))
         .route("/api/log", post(log_handler))
         .route("/api/devices", get(list_devices_handler))
-        .route("/api/devices/{friendly_id}", get(get_device_handler))
+        .route("/api/devices/{id}", get(get_device_handler))
         .route(
-            "/api/devices/{friendly_id}/images",
+            "/api/devices/{id}/images",
             get(get_device_images_handler),
         )
         .route(
-            "/api/devices/{friendly_id}/images",
+            "/api/devices/{id}/images",
             put(put_device_images_handler),
         )
         .with_state(state)

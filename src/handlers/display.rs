@@ -45,7 +45,7 @@ pub async fn display_handler(
 
     // Lookup device by API key
     let device = sqlx::query!(
-        "SELECT mac, friendly_id, images_json FROM devices WHERE api_key = ?",
+        "SELECT mac, id, images_json FROM devices WHERE api_key = ?",
         access_token
     )
     .fetch_optional(&*state.db)
@@ -62,7 +62,7 @@ pub async fn display_handler(
             };
 
             let mut counters = state.image_counters.lock().await;
-            let index: &mut usize = counters.entry(dev.friendly_id.clone()).or_insert(0);
+            let index: &mut usize = counters.entry(dev.id.clone()).or_insert(0);
             let image_url = if images.is_empty() {
                 state.config.app.setup_logo_url.clone()
             } else {
@@ -92,13 +92,13 @@ pub async fn display_handler(
                     battery_voltage = ?,
                     fw_version = ?,
                     refresh_rate = ?
-                WHERE mac = ?
+                WHERE id = ?
                 "#,
                 rssi_val,
                 battery_val,
                 fw_val,
                 refresh_val,
-                dev.mac
+                dev.id
             )
             .execute(&*state.db)
             .await;
@@ -106,6 +106,7 @@ pub async fn display_handler(
             info!(
                 msg = "Processing display request",
                 req_id = %request_id_to_string(&req_id),
+                id = %dev.id,
                 mac = ?dev.mac,
                 %rssi,
                 %fw_version,

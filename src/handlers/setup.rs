@@ -52,14 +52,14 @@ pub async fn setup_handler(
         .map(char::from)
         .collect();
 
-    let friendly_id = Uuid::new_v4().simple().to_string()[..6].to_uppercase();
+    let id = Uuid::new_v4().simple().to_string()[..6].to_uppercase();
 
     // Insert into DB
     let _ = sqlx::query!(
-        "INSERT INTO devices (mac, api_key, friendly_id) VALUES (?, ?, ?)",
+        "INSERT INTO devices (mac, api_key, id) VALUES (?, ?, ?)",
         mac,
         api_key,
-        friendly_id
+        id
     )
     .execute(&*state.db)
     .await;
@@ -68,13 +68,13 @@ pub async fn setup_handler(
         msg = "Device successfully registered",
         req_id = %request_id_to_string(&req_id),
         %mac,
-        %friendly_id
+        %id
     );
 
     Json(SetupResponse {
         status: 200,
         api_key: Some(api_key),
-        friendly_id: Some(friendly_id),
+        friendly_id: Some(id),
         image_url: Some(state.config.app.setup_logo_url.clone()),
         filename: Some("empty_state".to_string()),
     })
