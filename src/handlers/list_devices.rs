@@ -5,9 +5,9 @@ use axum::{Json, extract::State};
 pub async fn list_devices_handler(State(state): State<AppState>) -> Json<Vec<DeviceInfo>> {
     let devices = sqlx::query!(
         r#"
-        SELECT friendly_id, mac, rssi, battery_voltage, fw_version, refresh_rate
+        SELECT id, mac, rssi, battery_voltage, fw_version, refresh_rate
         FROM devices
-        ORDER BY friendly_id
+        ORDER BY id
         "#
     )
     .fetch_all(&*state.db)
@@ -17,7 +17,7 @@ pub async fn list_devices_handler(State(state): State<AppState>) -> Json<Vec<Dev
     let result = devices
         .into_iter()
         .map(|d| DeviceInfo {
-            id: d.friendly_id,
+            id: d.id,
             mac: d.mac,
             rssi: d.rssi,
             battery_voltage: d.battery_voltage,

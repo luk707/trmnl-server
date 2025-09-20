@@ -21,15 +21,9 @@ pub struct DisplayResponse {
 }
 
 #[derive(Serialize)]
-pub struct DisplayError {
-    pub status: u16,
-    pub error: String,
-}
-
-#[derive(Serialize)]
 pub struct DeviceInfo {
-    pub id: String, // friendly_id
-    pub mac: String,
+    pub id: String,
+    pub mac: Option<String>,
     pub rssi: Option<i64>,
     pub battery_voltage: Option<f64>,
     pub fw_version: Option<String>,

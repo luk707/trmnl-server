@@ -23,3 +23,10 @@ pub fn get_header(headers: &HeaderMap, name: &HeaderName) -> String {
         .unwrap_or_default()
         .to_string()
 }
+
+pub fn get_optional_header(headers: &HeaderMap, name: &HeaderName) -> Option<String> {
+    headers
+        .get(name)
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string())
+    }

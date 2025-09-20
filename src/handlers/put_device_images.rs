@@ -2,7 +2,7 @@ use crate::state::AppState;
 use axum::{Json, extract::Path, extract::State};
 
 pub async fn put_device_images_handler(
-    Path(friendly_id): Path<String>,
+    Path(id): Path<String>,
     State(state): State<AppState>,
     Json(images): Json<Vec<String>>,
 ) -> Json<Vec<String>> {
@@ -11,9 +11,9 @@ pub async fn put_device_images_handler(
 
     // Update the database
     let _ = sqlx::query!(
-        "UPDATE devices SET images_json = ? WHERE friendly_id = ?",
+        "UPDATE devices SET images_json = ? WHERE id = ?",
         json_str,
-        friendly_id
+        id
     )
     .execute(&*state.db)
     .await;

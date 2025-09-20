@@ -9,16 +9,16 @@ use tracing::info;
 use crate::{models::DeviceInfo, state::AppState, utils::request_id_to_string};
 
 pub async fn get_device_handler(
-    Path(friendly_id): Path<String>,
+    Path(id): Path<String>,
     State(state): State<AppState>,
     Extension(req_id): Extension<RequestId>,
 ) -> Result<Json<DeviceInfo>, (StatusCode, String)> {
-    // Lookup device by friendly_id
+    // Lookup device by id
     let device = sqlx::query!(
-        "SELECT mac, friendly_id, rssi, battery_voltage, fw_version, refresh_rate
+        "SELECT mac, id, rssi, battery_voltage, fw_version, refresh_rate
          FROM devices
-         WHERE friendly_id = ?",
-        friendly_id
+         WHERE id = ?",
+        id
     )
     .fetch_optional(&*state.db)
     .await
@@ -29,12 +29,12 @@ pub async fn get_device_handler(
             info!(
                 msg = "Fetched device",
                 req_id = %request_id_to_string(&req_id),
-                friendly_id = %d.friendly_id,
-                mac = %d.mac,
+                id = %d.id,
+                mac = ?d.mac,
             );
 
             Ok(Json(DeviceInfo {
-                id: d.friendly_id,
+                id: d.id,
                 mac: d.mac,
                 rssi: d.rssi,
                 battery_voltage: d.battery_voltage,
@@ -46,13 +46,10 @@ pub async fn get_device_handler(
             info!(
                 msg = "Device not found",
                 req_id = %request_id_to_string(&req_id),
-                friendly_id = %friendly_id
+                id = %id
             );
 
-            Err((
-                StatusCode::NOT_FOUND,
-                format!("Device {} not found", friendly_id),
-            ))
+            Err((StatusCode::NOT_FOUND, format!("Device {} not found", id)))
         }
     }
 }

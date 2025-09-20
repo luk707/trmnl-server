@@ -6,16 +6,13 @@ fn parse_images(json: &str) -> Vec<String> {
 }
 
 pub async fn get_device_images_handler(
-    Path(friendly_id): Path<String>,
+    Path(id): Path<String>,
     State(state): State<AppState>,
 ) -> Json<Vec<String>> {
-    let record = sqlx::query!(
-        "SELECT images_json FROM devices WHERE friendly_id = ?",
-        friendly_id
-    )
-    .fetch_optional(&*state.db)
-    .await
-    .unwrap();
+    let record = sqlx::query!("SELECT images_json FROM devices WHERE id = ?", id)
+        .fetch_optional(&*state.db)
+        .await
+        .unwrap();
 
     let images = record
         .map(|r| parse_images(&r.images_json))
