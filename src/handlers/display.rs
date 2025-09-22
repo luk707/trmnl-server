@@ -5,27 +5,26 @@ use axum::{
     extract::Extension,
     http::{HeaderMap, StatusCode},
 };
-use tower_http::request_id::RequestId;
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::{
-    config::ServerConfig,
+    config::AppSettings,
     headers::{
         HEADER_ACCESS_TOKEN, HEADER_BATTERY_VOLTAGE, HEADER_FW_VERSION, HEADER_REFRESH_RATE,
         HEADER_RSSI,
     },
     models::DisplayResponse,
     repositories::device::DeviceRepo,
-    utils::{get_header, request_id_to_string},
+    utils::get_header,
 };
 
 const DEFAULT_REFRESH_RATE: &str = "1800";
 
+#[instrument(name = "handlers.display", skip(headers, device_repo, settings))]
 pub async fn display_handler(
     headers: HeaderMap,
-    Extension(req_id): Extension<RequestId>,
     Extension(device_repo): Extension<DeviceRepo>,
-    Extension(config): Extension<ServerConfig>,
+    Extension(settings): Extension<AppSettings>,
 ) -> Result<Json<DisplayResponse>, (StatusCode, &'static str)> {
     let access_token = get_header(&headers, &HEADER_ACCESS_TOKEN);
     let rssi = get_header(&headers, &HEADER_RSSI);
@@ -38,7 +37,6 @@ pub async fn display_handler(
         refresh_rate_raw
     };
 
-    // Generate filename based on current time
     let filename = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs().to_string())
@@ -64,21 +62,9 @@ pub async fn display_handler(
             .await
             .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong"))?;
 
-        info!(
-            msg = "Processing display request",
-            req_id = %request_id_to_string(&req_id),
-            id = %device.id,
-            mac = ?device.mac,
-            %rssi,
-            %fw_version,
-            %battery_voltage,
-            %refresh_rate,
-            %filename
-        );
-
         return Ok(Json(DisplayResponse {
             status: 0,
-            image_url: config.app.setup_logo_url.clone(),
+            image_url: settings.setup_logo_url.clone(),
             filename,
             update_firmware: false,
             firmware_url: None,
@@ -89,8 +75,6 @@ pub async fn display_handler(
 
     info!(
         msg = "Rejecting display request",
-        req_id = %request_id_to_string(&req_id),
-        access_token = %access_token,
         %rssi,
         %fw_version,
         %battery_voltage,
@@ -99,7 +83,7 @@ pub async fn display_handler(
 
     Ok(Json(DisplayResponse {
         status: 500,
-        image_url: config.app.setup_logo_url.clone(),
+        image_url: settings.setup_logo_url.clone(),
         filename,
         update_firmware: false,
         firmware_url: None,

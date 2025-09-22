@@ -2,7 +2,9 @@ use crate::{models::DeviceInfo, repositories::device::DeviceRepo};
 use axum::Extension;
 use axum::Json;
 use axum::http::StatusCode;
+use tracing::instrument;
 
+#[instrument(name = "handlers.list_devices", skip(device_repo))]
 pub async fn list_devices_handler(
     Extension(device_repo): Extension<DeviceRepo>,
 ) -> Result<Json<Vec<DeviceInfo>>, (StatusCode, &'static str)> {

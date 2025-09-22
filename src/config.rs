@@ -11,9 +11,38 @@ pub struct AppSettings {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum LogFormat {
+    Json,
+    Pretty,
+}
+
+impl Default for LogFormat {
+    fn default() -> Self {
+        LogFormat::Json
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct LoggingSettings {
+    #[serde(default)]
+    pub format: LogFormat,
+}
+
+impl Default for LoggingSettings {
+    fn default() -> Self {
+        LoggingSettings {
+            format: LogFormat::Json,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct ServerConfig {
     pub database: DatabaseSettings,
     pub app: AppSettings,
+    #[serde(default)]
+    pub logging: LoggingSettings,
 }
 
 impl ServerConfig {

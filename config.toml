@@ -3,3 +3,6 @@ path = "trmnl.db"
 
 [app]
 setup_logo_url = "https://usetrmnl.com/images/setup/setup-logo.bmp"
+
+[logging]
+format = "pretty"

@@ -3,9 +3,11 @@ use axum::{
     extract::{Extension, Path},
     http::StatusCode,
 };
+use tracing::instrument;
 
 use crate::{models::DeviceInfo, repositories::device::DeviceRepo};
 
+#[instrument(name = "handlers.get_device", skip(device_repo, id), fields(device_id = %id))]
 pub async fn get_device_handler(
     Path(id): Path<String>,
     Extension(device_repo): Extension<DeviceRepo>,

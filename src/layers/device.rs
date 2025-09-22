@@ -6,7 +6,7 @@ use tower::Layer;
 use crate::repositories::device::{DeviceRepo, SqliteDeviceRepo};
 
 #[derive(Clone)]
-pub struct DeviceRepoLayer(DeviceRepo);
+pub struct DeviceRepoLayer(pub DeviceRepo);
 
 impl DeviceRepoLayer {
     pub fn sqlite(pool: Arc<SqlitePool>) -> Self {

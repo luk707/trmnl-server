@@ -4,7 +4,8 @@ use axum::{
 };
 
 use crate::handlers::{
-    get_device_handler, get_device_images_handler, list_devices_handler, put_device_images_handler,
+    display_handler, get_device_handler, get_device_images_handler, list_devices_handler,
+    log_handler, put_device_images_handler, setup_handler,
 };
 
 pub struct App;

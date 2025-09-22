@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
 pub struct SetupResponse {
@@ -9,7 +9,7 @@ pub struct SetupResponse {
     pub filename: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct DisplayResponse {
     pub status: u16,
     pub image_url: String,
@@ -20,7 +20,7 @@ pub struct DisplayResponse {
     pub reset_firmware: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct DeviceInfo {
     pub id: String,
     pub mac: Option<String>,
@@ -30,6 +30,7 @@ pub struct DeviceInfo {
     pub refresh_rate: Option<i64>,
 }
 
+#[derive(Clone)]
 pub struct Device {
     pub id: String,
     pub mac: Option<String>,

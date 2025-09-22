@@ -1,7 +1,9 @@
 use crate::repositories::device::DeviceRepo;
 
 use axum::{Extension, Json, extract::Path, http::StatusCode};
+use tracing::instrument;
 
+#[instrument(name = "handlers.put_device_images", skip(device_repo, id, images), fields(device_id = %id))]
 pub async fn put_device_images_handler(
     Extension(device_repo): Extension<DeviceRepo>,
     Path(id): Path<String>,

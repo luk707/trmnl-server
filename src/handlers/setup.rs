@@ -4,23 +4,19 @@ use axum::{
     http::{HeaderMap, StatusCode},
 };
 use rand::{Rng, distr::Alphanumeric};
-use tower_http::request_id::RequestId;
-use tracing::info;
+use tracing::{info, instrument};
 use uuid::Uuid;
 
 use crate::{
-    config::ServerConfig,
-    headers::HEADER_MAC,
-    models::SetupResponse,
-    repositories::device::DeviceRepo,
-    utils::{get_optional_header, request_id_to_string},
+    config::AppSettings, headers::HEADER_MAC, models::SetupResponse,
+    repositories::device::DeviceRepo, utils::get_optional_header,
 };
 
+#[instrument(name = "handlers.setup", skip(headers, device_repo, settings))]
 pub async fn setup_handler(
     headers: HeaderMap,
-    Extension(req_id): Extension<RequestId>,
     Extension(device_repo): Extension<DeviceRepo>,
-    Extension(config): Extension<ServerConfig>,
+    Extension(settings): Extension<AppSettings>,
 ) -> Result<Json<SetupResponse>, (StatusCode, &'static str)> {
     let mac = get_optional_header(&headers, &HEADER_MAC);
 
@@ -31,12 +27,7 @@ pub async fn setup_handler(
                 .await
                 .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong"))? =>
         {
-            // Device already registered → respond with null fields
-            info!(
-                msg = "Device setup attempted for existing device",
-                req_id = %request_id_to_string(&req_id),
-                ?mac
-            );
+            info!(msg = "Device setup attempted for existing device", ?mac);
 
             return Ok(Json(SetupResponse {
                 status: 404,
@@ -47,7 +38,6 @@ pub async fn setup_handler(
             }));
         }
         _ => {
-            // New device → generate API key and friendly ID
             let api_key: String = rand::rng()
                 .sample_iter(&Alphanumeric)
                 .take(22)
@@ -64,7 +54,6 @@ pub async fn setup_handler(
 
             info!(
                 msg = "Device successfully registered",
-                req_id = %request_id_to_string(&req_id),
                 ?mac,
                 %id
             );
@@ -73,7 +62,7 @@ pub async fn setup_handler(
                 status: 200,
                 api_key: Some(api_key),
                 friendly_id: Some(id),
-                image_url: Some(config.app.setup_logo_url.clone()),
+                image_url: Some(settings.setup_logo_url.clone()),
                 filename: Some("empty_state".to_string()),
             }))
         }
